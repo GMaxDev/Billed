@@ -8,7 +8,6 @@ import Bills from "../containers/Bills.js";
 import { bills } from "../fixtures/bills.js";
 import { ROUTES, ROUTES_PATH } from "../constants/routes.js";
 import { localStorageMock } from "../__mocks__/localStorage.js";
-import mockStore from "../__mocks__/store.js"
 import router from "../app/Router.js";
 import userEvent from "@testing-library/user-event";
 
