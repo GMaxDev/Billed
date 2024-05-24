@@ -10,6 +10,7 @@ import { ROUTES, ROUTES_PATH } from "../constants/routes.js";
 import { localStorageMock } from "../__mocks__/localStorage.js";
 import router from "../app/Router.js";
 import userEvent from "@testing-library/user-event";
+import mockStore from "../__mocks__/store.js";
 
 describe("Given I am connected as an employee", () => {
   describe("When I am on Bills Page", () => {
@@ -85,7 +86,7 @@ describe("Given I am connected as an employee", () => {
       expect(handleClickIconEye).toHaveBeenCalled();
       expect($.fn.modal).toHaveBeenCalled();
       expect(screen.getByTestId("modal")).toBeTruthy(); //rajouter le testid dans la div à tester danss BillsUI
-      expect(screen.getByTestId("modal-title")).toBeTruthy();//pareillement
+      expect(screen.getByTestId("modal-title")).toBeTruthy(); //pareillement
     });
   });
   describe("When employee click on new bill button", () => {
@@ -122,5 +123,73 @@ describe("Given I am connected as an employee", () => {
       expect(screen.getByText("Envoyer une note de frais")).toBeTruthy();
       expect(screen.getByTestId("form-new-bill")).toBeTruthy();
     });
-  })
+  });
+});
+
+//Test d'intégration pour les requêtes GET
+describe("Given I am a user logged in as an employee", () => {
+  const error404 = 404;
+  const error500 = 500;
+
+  beforeAll(() => {
+    // Mock localStorage
+    Object.defineProperty(window, "localStorage", {
+      value: localStorageMock,
+    });
+    // Ajout d'un utilisateur mocké à localStorage
+    window.localStorage.setItem(
+      "user",
+      JSON.stringify({ type: "Employee", email: "a@a" })
+    );
+    const root = document.createElement("div");
+    root.setAttribute("id", "root");
+    document.body.appendChild(root);
+    // router initialisé
+    router();
+  });
+
+  // fn() API error
+  const mockApiError = (errorCode) => {
+    // sim : erreur de récup de facture
+    mockStore.bills.list = jest
+      .fn()
+      .mockRejectedValue(new Error(`Erreur ${errorCode}`));
+    // nav vers la page facture
+    window.onNavigate(ROUTES_PATH.Bills);
+    document.body.innerHTML = BillsUI({ error: `Erreur ${errorCode}` });
+  };
+
+  // test pour la nav vers la page des factures
+  describe("When I navigate to the Bills page", () => {
+    test("Then retrieval of invoices via API mocked in GET", async () => {
+      const onNavigate = (pathname) => {
+        document.body.innerHTML = ROUTES({ pathname });
+      };
+      const mockedBills = new Bills({
+        document,
+        onNavigate,
+        store: mockStore,
+      });
+      // Récupération des factures
+      const bills = await mockedBills.getBills();
+      // Vérification que la liste des factures n'est pas vide
+      expect(bills.length != 0).toBeTruthy();
+    });
+
+    describe("When an error occurs on the API", () => {
+      test(`Then retrieving invoices from an API and failing with error message ${error404}`, async () => {
+        mockApiError(error404);
+        await new Promise(process.nextTick);
+        const message = await screen.getByText(/Erreur 404/);
+        expect(message).toBeTruthy();
+      });
+
+      test(`Then retrieving messages from an API and failing with error message ${error500}`, async () => {
+        mockApiError(error500);
+        await new Promise(process.nextTick);
+        const message = await screen.getByText(/Erreur 500/);
+        expect(message).toBeTruthy();
+      });
+    });
+  });
 });

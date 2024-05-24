@@ -10,8 +10,9 @@ import { localStorageMock } from "../__mocks__/localStorage.js";
 import router from "../app/Router.js";
 import userEvent from "@testing-library/user-event";
 import { application } from "express";
+import mockStore from "../__mocks__/store.js";
 
-jest.mock("../app/Store", () => mockStore);
+// jest.mock("../app/Store", () => mockStore);
 
 describe("Given I am connected as an employee", () => {
   describe("When I am on NewBill Page", () => {
