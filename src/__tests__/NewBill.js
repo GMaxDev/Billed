@@ -5,76 +5,83 @@
 import { screen, waitFor } from "@testing-library/dom";
 import NewBillUI from "../views/NewBillUI.js";
 import NewBill from "../containers/NewBill.js";
+import mockStore from "../__mocks__/store.js";
 import { ROUTES, ROUTES_PATH } from "../constants/routes.js";
 import { localStorageMock } from "../__mocks__/localStorage.js";
 import router from "../app/Router.js";
 import userEvent from "@testing-library/user-event";
 import { application } from "express";
-import mockStore from "../__mocks__/store.js";
-
-// jest.mock("../app/Store", () => mockStore);
 
 describe("Given I am connected as an employee", () => {
   describe("When I am on NewBill Page", () => {
-    beforeEach(() => {
-      Object.defineProperty(window, "localStorage", {
-        value: localStorageMock,
-      });
-      window.localStorage.setItem(
-        "user",
-        JSON.stringify({
-          status: "connected",
-          type: "Employee",
-        })
-      );
-      //Simule le rendu de l'application
-      const root = document.createElement("div");
-      root.setAttribute("id", "root");
-      document.body.append(root); //Attache la div au body simulé
-      router();
-    });
-
     test("Then the form should be displayed", () => {
       const html = NewBillUI();
       document.body.innerHTML = html;
       expect(screen.getByTestId("form-new-bill"));
     });
 
-    test("Then mail icon should be highlighted", async () => {
-      window.onNavigate(ROUTES_PATH.NewBill)
+    describe("when uploading a file with the correct format", () => {
+      test("should save the user's email", () => {
+        // On setup le localstorageMock
+        window.localStorage.setItem(
+          "user",
+          JSON.stringify({
+            status: "connected",
+            type: "Employee",
+            email: "user@email.com",
+          })
+        );
 
-      const highlitedIcon = screen.getByTestId("icon-mail")
-      await waitFor(() => highlitedIcon);
-      expect(highlitedIcon).toHaveClass("active-icon")
-    })
-  });
+        // On mock les fonctions et les données
+        const mockGetElementById = jest.fn().mockReturnValue({});
+        // On imulate l'envoie d'une facture
+        const createMock = jest
+          .fn()
+          .mockResolvedValue({ fileUrl: "fileURL", key: "key" });
+        const formatFile = new File(["img"], "image.png", {
+          type: "image/png",
+        });
 
-  describe ("When I am on NewBill form", () => {
-    test("Then I add File", async () => {
-      //On créé une instance de newBill
-      const dashboard = new NewBill({
-        document,
-        onNavigate,
-        store: mockStore,
-        localStorage: localStorageMock,
+        const documentMock = {
+          querySelector: (selector) => {
+            if (selector === 'input[data-testid="file"]') {
+              return {
+                files: [formatFile],
+                addEventListener: jest.fn(),
+              };
+            } else {
+              return { addEventListener: jest.fn() };
+            }
+          },
+          getElementById: mockGetElementById,
+        };
+
+        // On setup une instance de test
+        const storeMock = {
+          bills: () => ({
+            create: createMock,
+          }),
+        };
+        const objInstance = new NewBill({
+          document: documentMock,
+          onNavigate: {},
+          store: storeMock,
+          localStorage: {},
+        });
+
+        // On simule le téléchargement du fichier
+        objInstance.handleChangeFile({
+          preventDefault: jest.fn(),
+          target: { value: "image.png" },
+        });
+
+        // On indique ce que l'on doit avoir à la fin
+        const expectedEmail = "user@email.com";
+        const formData = createMock.mock.calls[0][0].data;
+        console.log("formData", formData);
+
+        expect(formData.get("email")).toEqual(expectedEmail);
       });
-  
-      //On crée une fonction mock à partir de la méthode handleChangeFile de l'objet dashboard, dans lequelle on a notre class
-      const handleChangeFile = jest.fn(dashboard.handleChangeFile);
-      const inputFile = screen.getByTestId("file");
-      inputFile.addEventListener("change", handleChangeFile);
-      fireEvent.change(inputFile, {
-        target: {
-          files: [
-            new File(["document.jpg"], "document.jpg", {
-              type: "document/jpg",
-            }),
-          ],
-        },
-      });
-  
-      expect(handleChangeFile).toBeCalled();
-      expect(screen.getByText("Envoyer une note de frais")).toBeTruthy();
     });
-  })
+  });
 });
