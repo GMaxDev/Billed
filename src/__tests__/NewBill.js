@@ -21,8 +21,8 @@ describe("Given I am connected as an employee", () => {
     });
 
     describe("when uploading a file with the correct format", () => {
-      test("should save the user's email", () => {
-        // On setup le localstorageMock
+      test("should save the user's email", async () => {
+        // Setup du localStorageMock
         window.localStorage.setItem(
           "user",
           JSON.stringify({
@@ -32,9 +32,7 @@ describe("Given I am connected as an employee", () => {
           })
         );
 
-        // On mock les fonctions et les données
-        const mockGetElementById = jest.fn().mockReturnValue({});
-        // On imulate l'envoie d'une facture
+        // Mock des fonctions et des données
         const createMock = jest
           .fn()
           .mockResolvedValue({ fileUrl: "fileURL", key: "key" });
@@ -43,44 +41,31 @@ describe("Given I am connected as an employee", () => {
         });
 
         const documentMock = {
-          querySelector: (selector) => {
-            if (selector === 'input[data-testid="file"]') {
-              return {
-                files: [formatFile],
-                addEventListener: jest.fn(),
-              };
-            } else {
-              return { addEventListener: jest.fn() };
-            }
-          },
-          getElementById: mockGetElementById,
+          querySelector: (selector) =>
+            selector === 'input[data-testid="file"]'
+              ? { files: [formatFile], addEventListener: jest.fn() }
+              : { addEventListener: jest.fn() },
+          getElementById: jest.fn().mockReturnValue({}),
         };
 
-        // On setup une instance de test
-        const storeMock = {
-          bills: () => ({
-            create: createMock,
-          }),
-        };
+        // Setup de l'instance de test
         const objInstance = new NewBill({
           document: documentMock,
           onNavigate: {},
-          store: storeMock,
+          store: { bills: () => ({ create: createMock }) },
           localStorage: {},
         });
 
-        // On simule le téléchargement du fichier
+        // Simulation du téléchargement de fichier
         objInstance.handleChangeFile({
           preventDefault: jest.fn(),
           target: { value: "image.png" },
         });
 
-        // On indique ce que l'on doit avoir à la fin
-        const expectedEmail = "user@email.com";
+        // Vérification du résultat
+        expect(createMock).toHaveBeenCalled();
         const formData = createMock.mock.calls[0][0].data;
-        console.log("formData", formData);
-
-        expect(formData.get("email")).toEqual(expectedEmail);
+        expect(formData.get("email")).toEqual("user@email.com");
       });
     });
   });
