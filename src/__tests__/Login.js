@@ -228,3 +228,74 @@ describe("Given that I am a user on login page", () => {
     });
   });
 });
+
+describe("Given that I am a user on login page", () => {
+  describe("When I fill fields in correct format and I click on employee button Login In", () => {
+    test("Then I should be identified as an Employee in app with a defined store", async () => {
+      document.body.innerHTML = LoginUI();
+      
+      const inputData = {
+        email: "johndoe@email.com",
+        password: "azerty",
+      };
+
+      // On simule la saisie utilisateur
+      const emailInput = screen.getByTestId("employee-email-input");
+      const passwordInput = screen.getByTestId("employee-password-input");
+      fireEvent.change(emailInput, { target: { value: inputData.email } });
+      fireEvent.change(passwordInput, { target: { value: inputData.password } });
+
+      // Mock localStorage
+      const mockLocalStorage = {
+        getItem: jest.fn(() => null),
+        setItem: jest.fn(() => null),
+      };
+      Object.defineProperty(window, "localStorage", {
+        value: mockLocalStorage,
+        writable: true,
+      });
+
+      // Mock de la navigation
+      const onNavigate = (pathname) => {
+        document.body.innerHTML = ROUTES({ pathname });
+      };
+
+      // Mock du store
+      const mockStore = {
+        login: jest.fn(() => Promise.resolve({ jwt: "mockJwt" })),
+      };
+
+      // On initialise l'instance login
+      const login = new Login({
+        document,
+        localStorage: window.localStorage,
+        onNavigate,
+        PREVIOUS_LOCATION: "",
+        store: mockStore,
+      });
+
+      // On simule la soumission du formulaire
+      const form = screen.getByTestId("form-employee");
+      fireEvent.submit(form);
+
+      // On vérifie que la méthode login a été appelée avec les bons arguments
+      expect(mockStore.login).toHaveBeenCalledWith(
+        JSON.stringify({
+          email: inputData.email,
+          password: inputData.password,
+        })
+      );
+
+      // On vérifiee que localStorage.setItem a été appelé avec les bons arguments
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+        "user",
+        JSON.stringify({
+          type: "Employee",
+          email: inputData.email,
+          password: inputData.password,
+          status: "connected",
+        })
+      );
+    });
+  });
+});
