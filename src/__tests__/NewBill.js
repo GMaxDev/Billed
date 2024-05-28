@@ -49,7 +49,7 @@ describe("Given I am connected as an employee", () => {
         };
 
         // Setup de l'instance de test
-        const objInstance = new NewBill({
+        const newBill = new NewBill({
           document: documentMock,
           onNavigate: {},
           store: { bills: () => ({ create: createMock }) },
@@ -57,7 +57,7 @@ describe("Given I am connected as an employee", () => {
         });
 
         // Simulation du téléchargement de fichier
-        objInstance.handleChangeFile({
+        newBill.handleChangeFile({
           preventDefault: jest.fn(),
           target: { value: "image.png" },
         });
@@ -66,6 +66,67 @@ describe("Given I am connected as an employee", () => {
         expect(createMock).toHaveBeenCalled();
         const formData = createMock.mock.calls[0][0].data;
         expect(formData.get("email")).toEqual("user@email.com");
+      });
+    });
+    describe("when submitting a new bill", () => {
+      test("should call the update method on the store", () => {
+        // Mock des fonctions et des données
+        const formatFile = new File(["img"], "image.png", {
+          type: "image/png",
+        });
+        const mockUpdate = jest.fn().mockResolvedValue({});
+        const documentMock = {
+          querySelector: jest.fn((selector) => ({
+            files:
+              selector === 'input[data-testid="file"]' ? [formatFile] : [],
+            addEventListener: jest.fn(),
+          })),
+          getElementById: jest.fn().mockReturnValue({}),
+        };
+        const storeMock = { bills: () => ({ update: mockUpdate }) };
+        const newBill = new NewBill({
+          document: documentMock,
+          onNavigate: jest.fn(),
+          store: storeMock,
+          localStorage: {},
+        });
+
+        // On mock la soumission du formulaire
+        newBill.handleSubmit({
+          preventDefault: jest.fn(),
+          target: {
+            querySelector: jest.fn(
+              (selector) =>
+                ({
+                  'select[data-testid="expense-type"]': { value: "type" },
+                  'input[data-testid="expense-name"]': { value: "name" },
+                  'input[data-testid="amount"]': { value: "3000" },
+                  'input[data-testid="datepicker"]': { value: "date" },
+                  'input[data-testid="vat"]': { value: "vat" },
+                  'input[data-testid="pct"]': { value: "25" },
+                  'textarea[data-testid="commentary"]': { value: "commentary" },
+                }[selector])
+            ),
+          },
+        });
+
+        // données attendu
+        const expectedData = {
+          email: "user@email.com",
+          type: "type",
+          name: "name",
+          amount: 3000,
+          date: "date",
+          vat: "vat",
+          pct: 25,
+          commentary: "commentary",
+          fileUrl: null,
+          fileName: null,
+          status: "pending",
+        };
+
+        const data = JSON.parse(mockUpdate.mock.calls[0][0].data);
+        expect(data).toMatchObject(expectedData);
       });
     });
   });
