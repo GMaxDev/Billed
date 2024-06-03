@@ -286,7 +286,7 @@ describe("Given that I am a user on login page", () => {
         })
       );
 
-      // On vérifiee que localStorage.setItem a été appelé avec les bons arguments
+      // On vérifie que localStorage.setItem a été appelé avec les bons arguments
       expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
         "user",
         JSON.stringify({
