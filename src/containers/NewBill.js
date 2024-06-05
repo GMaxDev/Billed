@@ -15,38 +15,53 @@ export default class NewBill {
     this.billId = null
     new Logout({ document, localStorage, onNavigate })
   }
+  
   handleChangeFile = e => {
-    e.preventDefault()
-    const file = this.document.querySelector(`input[data-testid="file"]`).files[0]
-    const allowedExtensions = ['jpg', 'jpeg', 'png']
+    e.preventDefault();
+    const fileInput = this.document.querySelector(`input[data-testid="file"]`);
+    const file = fileInput.files[0];
+  
+    if (!file) return;
+  
+    // On vérifie si le fichier est une image
+    const isPicture = (mimeType) => ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(mimeType);
+  
+    if (!isPicture(file.type)) {
+      // Handle case where the selected file is not an image
+      const errorElement = document.createElement('div');
+      errorElement.textContent = "Le fichier sélectionné n'est pas une image. Veuillez sélectionner un fichier image (JPEG, JPG, PNG, GIF).";
+      errorElement.style.color = 'red';
+  
+      // Display the error message
+      fileInput.parentNode.appendChild(errorElement);
+  
+      // Reset the file input to allow selecting a new file
+      fileInput.value = '';
+  
+      return;
+    }
+  
     const filePath = e.target.value.split(/\\/g)
     const fileName = filePath[filePath.length-1]
+    const formData = new FormData()
+    const email = JSON.parse(localStorage.getItem("user")).email
+    formData.append('file', file)
+    formData.append('email', email)
 
-    for(const extension of allowedExtensions){
-      if(fileName.endsWith(`.${extension}`)){
-        const formData = new FormData()
-        const email = JSON.parse(localStorage.getItem("user")).email
-
-        formData.append('file', file)
-        formData.append('email', email)
-
-        this.store
-        .bills()
-        .create({
-          data: formData,
-          headers: {
-            noContentType: true
-          }
-        })
-        .then(({fileUrl, key}) => {
-          console.log(fileUrl)
-          this.billId = key
-          this.fileUrl = fileUrl
-          this.fileName = fileName
-        }).catch(error => console.error(error))
-        break
-      }
-    }
+    this.store
+      .bills()
+      .create({
+        data: formData,
+        headers: {
+          noContentType: true
+        }
+      })
+      .then(({fileUrl, key}) => {
+        console.log(fileUrl)
+        this.billId = key
+        this.fileUrl = fileUrl
+        this.fileName = fileName
+      }).catch(error => console.error(error))
   }
 
   handleSubmit = e => {
